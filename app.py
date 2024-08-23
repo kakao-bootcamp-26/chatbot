@@ -1,20 +1,29 @@
-import requests
-from translate import user_input
+from flask import Flask, request, jsonify
+import pickle
 
-def get_prediction(input_text):
-    url = 'http://192.168.219.139:5000/chat'  # Flask 서버 주소
-    data = {'input': input_text}
-    
-    # POST 요청으로 데이터를 서버에 보냄
-    response = requests.post(url, json=data)
-    
-    if response.status_code == 200:
-        result = response.json()
-        print(f"Server response: {result['response']}")
-    else:
-        print(f"Error: {response.status_code}, {response.text}")
+app = Flask(__name__)
+
+# 모델과 벡터라이저 함께 로드
+with open('svm_model.pkl', 'rb') as model_file:
+    model_pipeline = pickle.load(model_file)
+
+# 챗봇 엔드포인트
+@app.route('/chat', methods=['POST'])
+def chat():
+    data = request.json
+
+    user_input = data.get('input')
+
+    if not user_input:
+        return jsonify({'error': 'No input provided'}), 400
+
+    # 예측 수행 (모델 파이프라인은 입력 데이터를 벡터화하고 예측을 수행함)
+    prediction = model_pipeline.predict([user_input])
+
+    # 예측 결과를 사용해 응답 생성
+    response = f"{prediction[0]}"
+
+    return jsonify({'response': response})
 
 if __name__ == '__main__':
-    test_input = "음식이 맛있는 곳." # 입력
-    chat_input = user_input(test_input)
-    get_prediction(chat_input)
+    app.run(host='0.0.0.0', port=5000)

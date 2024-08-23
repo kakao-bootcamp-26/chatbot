@@ -1,5 +1,5 @@
 import requests
-from translate import user_input, user_output
+from translate import user_input
 
 def get_prediction(input_text):
     url = 'http://192.168.219.139:5000/chat'  # Flask 서버 주소
@@ -15,5 +15,6 @@ def get_prediction(input_text):
         print(f"Error: {response.status_code}, {response.text}")
 
 if __name__ == '__main__':
-    test_input = "Great place with nice ambiance and delicious food." # 입력
-    get_prediction(test_input)
+    test_input = "음식이 맛있는 곳." # 입력
+    chat_input = user_input(test_input)
+    get_prediction(chat_input)

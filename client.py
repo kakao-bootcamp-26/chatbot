@@ -1,8 +1,11 @@
 import requests
 from translate import user_input
+import os
 
 def get_prediction(input_text):
-    url = 'http://192.168.219.139:5000/chat'  # Flask 서버 주소
+    # 서버 주소를 환경 변수에서 가져오도록 수정합니다.
+    server_url = os.getenv('SERVER_URL', 'http://localhost:5000')
+    url = f'{server_url}/chat'
     data = {'input': input_text}
     
     # POST 요청으로 데이터를 서버에 보냄

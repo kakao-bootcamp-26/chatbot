@@ -6,7 +6,7 @@ pipeline {
             steps {
                 script {
                     sh '''
-                        curl -X POST http://10.0.2.24:8080/job/chatbot/build?token=my-trigger-token
+                        curl -X POST http://10.0.2.81:8080/job/chatbot/build?token=my-trigger-token
                     '''
                 }
             }

@@ -12,7 +12,7 @@ openai.api_key = os.getenv('OPENAI_API_KEY')  # 환경 변수에서 OpenAI API �
 app = Flask(__name__)
 
 # 세션 데이터를 저장할 파일 경로
-session_file_path = 'kakaobootcamp/team/travel/chatbot/chatbot/session_data.json'
+session_file_path = 'session_data.json'
 
 # 세션 파일 초기화
 if not os.path.exists(session_file_path):

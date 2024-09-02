@@ -3,7 +3,9 @@ import openai
 import os
 import json
 from dotenv import load_dotenv
+import requests
 import time
+from threading import Thread
 
 # 환경 변수 로드
 load_dotenv()  # .env 파일을 로드하여 환경 변수를 설정
@@ -12,7 +14,7 @@ openai.api_key = os.getenv('OPENAI_API_KEY')  # 환경 변수에서 OpenAI API �
 app = Flask(__name__)
 
 # 세션 데이터를 저장할 파일 경로
-session_file_path = 'session_data.json'
+session_file_path = 'kakaobootcamp/team/travel/chatbot/chatbot/session_data.json'
 
 # 세션 파일 초기화
 if not os.path.exists(session_file_path):
@@ -70,7 +72,7 @@ def get_travel_recommendation_from_gpt(keywords):
             response = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
                 messages=[
-                    {"role": "system", "content": "다음 키워드를 바탕으로 해외 도시를 대표적인 하나만 추천해 주세요. 도시 이름만 반환해주세요"},
+                    {"role": "system", "content": "다음 키워드를 바탕으로 대표적인 해외의 도시 하나만 추천해 주세요. 도시 이름만 반환해주세요"},
                     {"role": "user", "content": f"Keywords: {', '.join(keywords)}"}
                 ],
                 max_tokens=100,
@@ -102,7 +104,7 @@ def get_response(intent, keywords=None):
     last_intent = session_data.get('last_intent')
 
     if intent == "여행지 추천" and last_intent == "awaiting keyword" and not keywords:
-        return "어떤 여행지를 추천해드릴까요?", "어떤 도시를 추천할까요?"
+        return "어떤 여행지를 추천해드릴까요?", "어떤 여행지를 추천해드릴까요?"
 
     if last_intent == "awaiting keyword" and keywords:
         city = get_travel_recommendation_from_gpt(keywords)
@@ -113,7 +115,7 @@ def get_response(intent, keywords=None):
     if intent == "여행지 추천" and not keywords:
         session_data['last_intent'] = "awaiting keyword"  # 키워드 기다리는 상태로 설정
         save_session_data(session_data)
-        return "어떤 여행지를 추천해드릴까요?", "어떤 도시를 추천할까요?"
+        return "어떤 여행지를 추천해드릴까요?", "어떤 여행지를 추천해드릴까요?"
     
     if intent == "여행지 추천" and keywords:
         city = get_travel_recommendation_from_gpt(keywords)
@@ -147,5 +149,45 @@ def chat():
         print(f"Error in /chat endpoint: {e}")
         return jsonify({'error': 'Internal server error'}), 500
 
-if __name__ == '__main__':
+def get_prediction(input_text):
+    """클라이언트 요청을 통해 서버에 입력을 전달하고 응답을 받습니다."""
+    url = 'http://127.0.0.1:5000/chat'  # Flask 서버 주소
+    data = {'input': input_text}  # 서버에서 기대하는 'input' 키로 수정
+    
+    # 요청 보내기
+    response = requests.post(url, json=data)
+    
+    if response.status_code == 200:
+        result = response.json()
+        
+        # 올바른 응답 키 사용
+        intent_response = result.get('intent_response', '응답 없음')
+        message = result.get('message', '메시지 없음')
+        recommendation = result.get('recommendation', '추천 없음')
+        
+        print(f"의도 응답: {intent_response}")
+        print(f"메시지: {message}")
+        print(f"추천: {recommendation}")
+
+    else:
+        print(f"오류: {response.status_code}, {response.text}")
+
+def run_server():
+    """Flask 서버를 별도의 스레드에서 실행합니다."""
     app.run(host='0.0.0.0', port=5000)
+
+if __name__ == '__main__':
+    # 서버 실행을 위한 스레드 시작
+    server_thread = Thread(target=run_server)
+    server_thread.start()
+
+    # 서버가 완전히 시작될 때까지 대기
+    time.sleep(3)  # 서버가 준비될 시간을 충분히 주기
+
+    # 사용자로부터 계속 입력을 받아 처리
+    while True:
+        user_input = input("사용자 입력: ")
+        if user_input.lower() in ['exit', 'quit']:
+            print("종료합니다.")
+            break
+        get_prediction(user_input)

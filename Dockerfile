@@ -5,10 +5,8 @@ FROM python:3.10.11
 WORKDIR /app
 
 # requirements.txt 파일과 Python 소스 파일들을 컨테이너로 복사합니다.
-COPY requirements.txt requirements.txt
-COPY app.py app.py
-COPY client.py client.py
-COPY svm_model.pkl svm_model.pkl
+COPY . .
+
 
 # 필요한 Python 패키지들을 설치합니다.
 RUN pip install --no-cache-dir -r requirements.txt

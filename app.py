@@ -4,7 +4,6 @@ import os
 import json
 from dotenv import load_dotenv
 import requests
-import time
 from threading import Thread
 
 # 환경 변수 로드
@@ -125,69 +124,49 @@ def get_response(intent, keywords=None):
     save_session_data(session_data)
     return "죄송합니다, 이해하지 못했습니다.", None
 
+@app.route('/process', methods=['POST'])
+def process_request():
+    """백엔드 서버로부터 데이터를 받아 처리하고 결과를 다시 전송하는 엔드포인트"""
+    data = request.json
+    user_input = data.get('input')
+    callback_url = data.get('callback_url')  # 결과를 전송할 백엔드 서버의 URL
 
-@app.route('/chat', methods=['POST'])
-def chat():
+    # 1. 입력을 받았다는 상태를 먼저 백엔드 서버로 전송
+    status_update = {'status': 'received', 'message': 'Input received by AI server'}
     try:
-        data = request.json
-        user_input = data.get('input')
-        if not user_input:
-            return jsonify({'error': 'No input provided'}), 400
+        status_response = requests.post(callback_url, json=status_update)
+        status_response.raise_for_status()
+        print("입력 상태 업데이트를 백엔드 서버로 전송했습니다.")
+    except requests.exceptions.RequestException as e:
+        print(f"입력 상태 업데이트 전송 중 오류 발생: {e}")
+        return jsonify({'status': 'failure', 'message': 'Failed to update status'}), 500
 
-        # 의도 분석
-        intent, raw_keywords = analyze_intent(user_input)
-        keywords = raw_keywords if raw_keywords else None
+    # 2. AI 서버에서 사용자 입력 처리
+    intent, keywords = analyze_intent(user_input)
+    message, city = get_response(intent, keywords)
 
-        # 응답 생성
-        message, city = get_response(intent, keywords)
-        return jsonify({
-            'intent_response': intent,  # 모델 응답 메시지 유형
-            'message': message,         # 사용자에게 보여줄 메시지
-            'recommendation': city      # 추천된 도시 이름
-        })
-    except Exception as e:
-        print(f"Error in /chat endpoint: {e}")
-        return jsonify({'error': 'Internal server error'}), 500
+    # 결과를 JSON 파일로 저장
+    result_data = {
+        'intent': intent,
+        'message': message,
+        'recommendation': city
+    }
+    with open('result.json', 'w') as json_file:
+        json.dump(result_data, json_file)
 
-def get_prediction(input_text):
-    """클라이언트 요청을 통해 서버에 입력을 전달하고 응답을 받습니다."""
-    url = 'http://127.0.0.1:5000/chat'  # Flask 서버 주소
-    data = {'input': input_text}  # 서버에서 기대하는 'input' 키로 수정
-    
-    # 요청 보내기
-    response = requests.post(url, json=data)
-    
-    if response.status_code == 200:
-        result = response.json()
-        
-        # 올바른 응답 키 사용
-        intent_response = result.get('intent_response', '응답 없음')
-        message = result.get('message', '메시지 없음')
-        recommendation = result.get('recommendation', '추천 없음')
-        
-        print(f"의도 응답: {intent_response}")
-        print(f"메시지: {message}")
-        print(f"추천: {recommendation}")
+    # 3. 처리된 결과를 백엔드 서버로 전송
+    try:
+        response = requests.post(callback_url, json=result_data)
+        response.raise_for_status()
+        return jsonify({'status': 'success', 'message': 'Result sent to backend server'}), 200
+    except requests.exceptions.RequestException as e:
+        print(f"결과 전송 중 오류 발생: {e}")
+        return jsonify({'status': 'failure', 'message': 'Failed to send result'}), 500
 
-    else:
-        print(f"오류: {response.status_code}, {response.text}")
-
-def run_server():
-    """Flask 서버를 별도의 스레드에서 실행합니다."""
-    app.run(host='0.0.0.0', port=5000)
+def run_ai_server():
+    """AI 서버 실행"""
+    app.run(host='0.0.0.0', port=5000)  # AI 서버는 5000 포트에서 실행
 
 if __name__ == '__main__':
-    # 서버 실행을 위한 스레드 시작
-    server_thread = Thread(target=run_server)
-    server_thread.start()
-
-    # 서버가 완전히 시작될 때까지 대기
-    time.sleep(3)  # 서버가 준비될 시간을 충분히 주기
-
-    # 사용자로부터 계속 입력을 받아 처리
-    while True:
-        user_input = input("사용자 입력: ")
-        if user_input.lower() in ['exit', 'quit']:
-            print("종료합니다.")
-            break
-        get_prediction(user_input)
+    # AI 서버 실행
+    run_ai_server()

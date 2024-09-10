@@ -17,7 +17,7 @@ pipeline {
                         --data 'token=my-trigger-token'
                     """, returnStdout: true).trim()
                     
-
+                    echo "AI Job Triggered: ${aiJobTrigger}"
                 }
             }
         }

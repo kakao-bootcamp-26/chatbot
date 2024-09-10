@@ -1,23 +1,11 @@
 pipeline {
     agent any
 
-    environment {
-        // Jenkins의 Credentials에 저장된 API 토큰을 사용
-        API_TOKEN = credentials('my-jenkins-api-token')  // 'my-jenkins-api-token'은 저장된 Credentials의 ID
-    }
-
     stages {
-        stage('Trigger AI Jenkins Job') {
+        stage('Build') {
             steps {
-                script {
-                    // API 토큰을 사용하여 다른 Jenkins 서버의 Job을 트리거
-                    def aiJobTrigger = sh(script: """
-                        curl -X POST http://10.0.2.246:8080/job/chatbot/build \
-                        --user 'ghddhksduq:${API_TOKEN}' \
-                        --data 'token=my-trigger-token'
-                    """, returnStdout: true).trim()
-                    
-                    echo "AI Job Triggered: ${aiJobTrigger}"
+                withCredentials([string(credentialsId: 'my-jenkins-api-token', variable: 'JENKINS_TOKEN')]) {
+                    sh 'curl -u ghddhksduq:$JENKINS_TOKEN http://10.0.2.246:8080/job/chatbot/build?token=my-trigger-token'
                 }
             }
         }

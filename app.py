@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 from gptapi import travel_recommend, find_aim
-
+# test
 app = Flask(__name__)
 
 @app.route('/ai/process', methods=['POST'])

@@ -5,8 +5,9 @@ pipeline {
         stage('Build') {
             steps {
                 withCredentials([string(credentialsId: 'my-jenkins-api-token', variable: 'JENKINS_TOKEN')]) {
-                    sh "echo Token is: ${JENKINS_TOKEN}"
-                    sh "curl -u ghddhksduq:111cb63b4bfd6c0a59ceb76fd6bdf7e85a http://10.0.2.246:8080/job/chatbot/build?token=my-trigger-token"
+                    sh """
+                        curl -u ghddhksduq:$JENKINS_TOKEN http://10.0.2.246:8080/job/chatbot/build?token=my-trigger-token
+                    """
                 }
             }
         }
